@@ -1,0 +1,216 @@
+/* colors
+--------- 
+flatiron blue - #1a75ff;
+light blue - #cce0ff;
+dark blue - #002966;
+*/
+
+/* globals
+---------- */
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+}
+
+nav, section, footer {
+  padding: 20px;
+}
+
+h1 {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 50px;
+}
+
+h2 {
+  color: darkred;
+  font-family: 'Caveat', cursive;
+  font-size: 30px;
+}
+
+.clearfix:after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+.wrapper {
+  max-width: 950px;
+  margin: 0 auto;
+}
+
+.col-narrow {
+  float: left;
+  width: 30%;
+}
+
+.col-wide {
+  float: left;
+  width: 70%;
+}
+
+.center-text {
+  text-align: center;
+}
+
+p {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* nav & footer
+------------------ */
+nav, footer {
+  background: #002966;
+  color: white;
+}
+
+nav h2, footer h2 {
+  color: white;
+}
+
+/* nav
+--------- */
+nav h1 {
+  margin: 0;
+  margin-top: 80px;
+}
+
+nav h2 {
+  margin: 0;
+}
+
+nav li {
+  display: inline-block;
+}
+
+nav ul {
+  padding: 0;
+}
+
+nav ul li a {
+  color: red;
+  text-decoration: none;
+  padding: 5px;
+}
+
+nav ul li a:hover {
+  color: darkred;
+}
+
+.profile-img {
+  width: 300px;
+  border-radius: 50%;
+  margin-right: 50px;
+}
+
+.tabs {
+  margin-top: 50px;
+}
+
+.tabs li a {
+  font-size: 18px;
+  color: white;
+}
+
+.tabs li a.active-tab {
+  color: grey;
+}
+
+/* biography
+------------ */
+.biography {
+  background: #1a75ff;
+}
+
+/* motivations
+-------------- */
+.motivation {
+  background: #cce0ff;
+  display: none;
+}
+
+/* aspirations
+-------------- */
+.aspirations {
+  background: #1a75ff;
+  display: none;
+}
+
+/* resume
+--------- */
+.resume {
+  display: none;
+  padding: 0;
+}
+
+.resume div {
+  padding: 20px;
+}
+
+/* technical experience
+----------------------- */
+.technical {
+  background: #1a75ff;
+}
+
+/* employment history
+--------------------- */
+.employment {
+  background: #cce0ff;
+}
+
+/* education
+------------ */
+.education {
+  background: #1a75ff;
+}
+
+/* contact info
+--------------- */
+.contact-info {
+  background: #cce0ff;
+  display: none;
+}
+
+.contact-info ul li {
+  list-style: none;
+  line-height: 1.5;
+  font-size: 18px;
+}
+
+.contact-info ul li a {
+  color: darkred;
+  text-decoration: none;
+}
+
+.contact-info ul li a:hover {
+  color: red;
+}
+
+/* footer
+--------- */
+footer {
+  text-align: center;
+}
+
+footer a {
+  color: red;
+  padding: 10px;
+  text-decoration: none;
+}
+
+footer a:hover {
+  color: darkred;
+}
+
+/* tablet
+---------- */
+
+/* mobile
+--------- */

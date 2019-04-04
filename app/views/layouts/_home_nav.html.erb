@@ -1,0 +1,24 @@
+<nav>
+  <div class="wrapper clearfix">
+    <div class="col-narrow">
+      <%= image_tag "me.jpg", class: "profile-img" %>
+    </div>
+    <div class="col-wide">
+      <div class="center-text">
+        <h1>Enoch Griffith</h1>
+        <h2>Portfolio Website</h2>
+        <ul>
+          <li><%= link_to "Home", root_path %></li>
+          <li><%= link_to "Blog", "#" %></li>
+        </ul>
+        <ul class="tabs">
+          <li><%= link_to "Biography", "#", id: "biography", class: "active-tab" %></li>
+          <li><%= link_to "Motivation", "#", id: "motivation" %></li>
+          <li><%= link_to "Aspiration", "#", id: "aspirations" %></li>
+          <li><%= link_to "Resume", "#", id: "resume" %></li>
+          <li><%= link_to "Contact Info", "#", id: "contact-info" %></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PortfolioWebsite</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <link href="https://fonts.googleapis.com/css?family=Caveat|Open+Sans:400,700" rel="stylesheet">
+    <%= stylesheet_link_tag 'home' %>
+    <%= javascript_include_tag 'home' %>
+  </head>
+
+  <body>
+    <%= render 'layouts/home_nav'%>
+    <%= yield %>
+    <%= render 'layouts/footer' %>
+  </body>
+</html>
