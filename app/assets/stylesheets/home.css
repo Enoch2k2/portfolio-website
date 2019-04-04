@@ -155,6 +155,10 @@ nav ul li a:hover {
   display: none;
 }
 
+.aspirations p {
+  font-size: 18px;
+  line-height: 1;
+}
 /* resume
 --------- */
 .resume {
