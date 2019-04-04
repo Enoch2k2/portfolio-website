@@ -122,6 +122,14 @@ nav ul li a:hover {
   color: grey;
 }
 
+#home {
+  display: none;
+}
+
+#blog {
+  display: none;
+}
+
 /* biography
 ------------ */
 .biography {
@@ -211,6 +219,58 @@ footer a:hover {
 
 /* tablet
 ---------- */
+@media screen and (max-width: 860px) {
+  .col-narrow {
+    float: none;
+    margin: 0 auto;
+    margin-right: 200px;
+  }
 
+  .col-wide {
+    float: none;
+    margin: 0 auto;
+  }
+
+  .profile-img {
+    width: 200px;
+  }
+
+  nav h1 {
+    margin: 0;
+  }
+
+  .wrapper {
+    max-width: 500px;
+  }
+}
 /* mobile
 --------- */
+
+@media screen and (max-width: 530px) {
+  .profile-img {
+    width: 100px;
+  }
+
+  .col-narrow {
+    margin: 0 auto;
+  }
+
+  nav h1 {
+    font-size: 30px;
+  }
+
+  nav h2 {
+    font-size: 25px;
+  }
+
+  section p {
+    line-height: 1.5;
+  }
+
+  .resume ul li {
+    line-height: 1.3;
+    font-size: 18px;
+    list-style: square;
+    padding: 5px;
+  }
+}
