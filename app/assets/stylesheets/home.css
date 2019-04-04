@@ -143,6 +143,11 @@ nav ul li a:hover {
   display: none;
 }
 
+.motivation ul li {
+  font-size: 18px;
+  line-height: 1.3;
+}
+
 /* aspirations
 -------------- */
 .aspirations {
