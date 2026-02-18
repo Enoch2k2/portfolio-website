@@ -280,24 +280,26 @@ p {
 
 .admin-tab-btn {
   text-align: left;
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 0;
+  padding: 8px 12px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .admin-tab-btn:hover {
-  border-color: #b8c6db;
+  color: var(--text-primary);
+  transform: translateX(1px);
 }
 
 .admin-tab-btn-active {
-  border-color: rgba(29, 78, 216, 0.45);
-  background: rgba(29, 78, 216, 0.08);
+  border-left-color: rgba(29, 78, 216, 0.65);
+  background: transparent;
   color: #1e3a8a;
 }
 
@@ -881,6 +883,13 @@ textarea {
 
   .admin-tab-btn {
     text-align: center;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  .admin-tab-btn-active {
+    border-left-color: transparent;
+    border-bottom-color: rgba(29, 78, 216, 0.65);
   }
 
   .bento-card,
@@ -913,6 +922,17 @@ textarea {
 
   .admin-sidebar {
     grid-template-columns: 1fr;
+  }
+
+  .admin-tab-btn {
+    text-align: left;
+    border-bottom: none;
+    border-left: 2px solid transparent;
+  }
+
+  .admin-tab-btn-active {
+    border-bottom-color: transparent;
+    border-left-color: rgba(29, 78, 216, 0.65);
   }
 
   .resume-text-content {
