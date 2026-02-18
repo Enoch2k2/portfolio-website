@@ -11,14 +11,14 @@ module Booking
 
       described_class.new(
         timezone: 'UTC',
-        days: 1,
+        days: 2,
         access_token_fetcher: -> { 'test-token' },
         calendar_client_factory: ->(_token) { fake_client }
       )
     end
 
     it 'filters out google busy windows from generated slots' do
-      travel_to Time.utc(2026, 2, 18, 8, 0, 0) do
+      travel_to Time.utc(2026, 2, 17, 8, 0, 0) do
         busy_windows = [
           { start_at: Time.utc(2026, 2, 18, 10, 0, 0), end_at: Time.utc(2026, 2, 18, 11, 0, 0) }
         ]
@@ -33,16 +33,39 @@ module Booking
     end
 
     it 'returns false for slot availability during a busy window' do
-      busy_windows = [
-        { start_at: Time.utc(2026, 2, 18, 14, 0, 0), end_at: Time.utc(2026, 2, 18, 15, 0, 0) }
-      ]
+      travel_to Time.utc(2026, 2, 17, 8, 0, 0) do
+        busy_windows = [
+          { start_at: Time.utc(2026, 2, 18, 14, 0, 0), end_at: Time.utc(2026, 2, 18, 15, 0, 0) }
+        ]
 
-      available = service_with_busy_windows(busy_windows).slot_available?(
-        Time.utc(2026, 2, 18, 14, 0, 0),
-        Time.utc(2026, 2, 18, 14, 30, 0)
-      )
+        available = service_with_busy_windows(busy_windows).slot_available?(
+          Time.utc(2026, 2, 18, 14, 0, 0),
+          Time.utc(2026, 2, 18, 14, 30, 0)
+        )
 
-      expect(available).to be(false)
+        expect(available).to be(false)
+      end
+    end
+
+    it 'does not return slots within the next 24 hours' do
+      travel_to Time.utc(2026, 2, 18, 8, 0, 0) do
+        payload = service_with_busy_windows([]).call
+        starts = payload[:days].flat_map { |day| day[:slots].map { |slot| Time.iso8601(slot[:start_at]) } }
+
+        expect(starts).to all(be >= Time.utc(2026, 2, 19, 8, 0, 0))
+      end
+    end
+
+    it 'respects configured minimum notice hours from environment' do
+      travel_to Time.utc(2026, 2, 18, 8, 0, 0) do
+        allow(ENV).to receive(:fetch).and_call_original
+        allow(ENV).to receive(:fetch).with("BOOKING_MIN_NOTICE_HOURS", 24).and_return("48")
+
+        payload = service_with_busy_windows([]).call
+        starts = payload[:days].flat_map { |day| day[:slots].map { |slot| Time.iso8601(slot[:start_at]) } }
+
+        expect(starts).to all(be >= Time.utc(2026, 2, 20, 8, 0, 0))
+      end
     end
   end
 end

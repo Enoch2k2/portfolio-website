@@ -78,6 +78,80 @@ Availability source:
 - Public booking availability is driven by Google Calendar free/busy data.
 - Edit availability by blocking/unblocking time directly in your Google Calendar.
 
+## Booking configuration
+
+Booking availability is generated server-side by `Booking::AvailabilityService` and enforced again
+when a meeting request is submitted. This keeps calendar UI behavior and backend validation aligned.
+
+Environment variables in `.env`:
+
+- `BOOKING_DAY_START_HOUR` (default `9`)
+  - Start hour for bookable windows (24h local time in the selected booking timezone).
+- `BOOKING_DAY_END_HOUR` (default `17`)
+  - End hour for bookable windows.
+- `BOOKING_WEEKDAYS` (default `1,2,3,4,5`)
+  - Allowed weekdays (`0=Sun ... 6=Sat`).
+- `BOOKING_MIN_NOTICE_HOURS` (default `24`)
+  - Minimum advance notice required to book a slot.
+  - Example: `24` means users can only pick slots at least 24 hours from "now".
+
+Timezone behavior:
+
+- The `/book` page uses a timezone dropdown with friendly labels (Eastern, Central, etc.) and GMT offsets.
+- The selected timezone is sent as a valid IANA timezone (for example `America/Chicago`).
+- Availability requests use `GET /api/v1/public/availability?timezone=<IANA>&days=<n>`.
+
+Practical examples:
+
+- Require 48-hour notice:
+  - `BOOKING_MIN_NOTICE_HOURS=48`
+- Include Saturdays:
+  - `BOOKING_WEEKDAYS=1,2,3,4,5,6`
+- Shift booking window to 10am-6pm:
+  - `BOOKING_DAY_START_HOUR=10`
+  - `BOOKING_DAY_END_HOUR=18`
+
+## Operations playbook
+
+### Daily scheduling workflow
+
+- Keep your Google Calendar as the source of truth for busy/free time.
+- Block focus periods and personal time directly in Google Calendar to remove those slots from public booking.
+- Use `BOOKING_MIN_NOTICE_HOURS` to protect prep time before calls.
+- Review incoming meetings in admin (`/workspace-ops`) and monitor status transitions (`tentative`, `confirmed`, `failed`).
+
+### Holiday and time-off handling
+
+- Add all-day or timed events in Google Calendar for holidays/PTO.
+- For partial days, add specific busy blocks (for example, `13:00-17:00`) to keep morning slots open.
+- If you know you'll be unavailable for an extended period, consider temporarily increasing `BOOKING_MIN_NOTICE_HOURS`.
+
+### Quick troubleshooting
+
+- **No slots appear on `/book`**
+  - Verify Google integration is connected in admin Integrations.
+  - Confirm timezone selection is correct for your region.
+  - Check `BOOKING_WEEKDAYS`, start/end hour env values, and `BOOKING_MIN_NOTICE_HOURS`.
+  - Check your Google Calendar for conflicting events.
+
+- **Meeting request submitted but not fully provisioned**
+  - Confirm background job processing is running in your `bin/dev` process set.
+  - Review Rails logs for OAuth token refresh, Google API, or Zoom API errors.
+  - Re-authenticate Google/Zoom if tokens are expired.
+
+- **Times appear shifted**
+  - Verify user-selected timezone on `/book`.
+  - Ensure server and frontend env values are current after editing `.env` files.
+  - Restart dev processes after env changes (`bin/dev`).
+
+### Safe change process
+
+- Change one booking env var at a time.
+- Restart services and test `/book` manually after each change.
+- Run automated checks:
+  - `bundle exec rspec spec/services/booking/availability_service_spec.rb`
+  - `npm --prefix client run test`
+
 ## CORS and domains
 
 CORS allowlist comes from:

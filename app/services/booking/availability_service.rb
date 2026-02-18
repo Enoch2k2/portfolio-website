@@ -23,6 +23,7 @@ module Booking
       desired_start = start_at.utc
       desired_end = end_at.utc
       return false if desired_end <= desired_start
+      return false if desired_start < minimum_bookable_start_utc
       return false if outside_business_hours?(desired_start.in_time_zone(@timezone), desired_end.in_time_zone(@timezone))
       return false if overlaps_meeting?(desired_start, desired_end)
 
@@ -67,7 +68,7 @@ module Booking
           slot_end = slot_start + SLOT_MINUTES.minutes
           utc_slot_start = slot_start.utc
           utc_slot_end = slot_end.utc
-          if utc_slot_start > now.utc &&
+          if utc_slot_start >= minimum_bookable_start_utc(now.utc) &&
              !overlaps_windows?(utc_slot_start, utc_slot_end, busy_windows) &&
              !overlaps_windows?(utc_slot_start, utc_slot_end, local_meetings)
             slots << { start_at: utc_slot_start.iso8601, end_at: utc_slot_end.iso8601 }
@@ -146,6 +147,14 @@ module Booking
 
     def day_allowed?(day)
       booking_weekdays.include?(day.wday)
+    end
+
+    def minimum_bookable_start_utc(reference_time = Time.current.utc)
+      reference_time + booking_min_notice_hours.hours
+    end
+
+    def booking_min_notice_hours
+      [ENV.fetch("BOOKING_MIN_NOTICE_HOURS", 24).to_i, 0].max
     end
 
   end

@@ -543,8 +543,28 @@ function buildMonthGrid(month: Date) {
   })
 }
 
+const BOOKING_TIMEZONE_OPTIONS = [
+  { value: 'America/New_York', label: 'Eastern Time (GMT-05:00 / GMT-04:00)' },
+  { value: 'America/Chicago', label: 'Central Time (GMT-06:00 / GMT-05:00)' },
+  { value: 'America/Denver', label: 'Mountain Time (GMT-07:00 / GMT-06:00)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (GMT-08:00 / GMT-07:00)' },
+  { value: 'America/Phoenix', label: 'Arizona Time (GMT-07:00)' },
+  { value: 'America/Anchorage', label: 'Alaska Time (GMT-09:00 / GMT-08:00)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (GMT-10:00)' },
+  { value: 'UTC', label: 'GMT / UTC (GMT+00:00)' },
+  { value: 'Europe/London', label: 'UK Time (GMT+00:00 / GMT+01:00)' },
+  { value: 'Europe/Paris', label: 'Central Europe (GMT+01:00 / GMT+02:00)' },
+  { value: 'Asia/Kolkata', label: 'India Time (GMT+05:30)' },
+  { value: 'Asia/Tokyo', label: 'Japan Time (GMT+09:00)' },
+  { value: 'Australia/Sydney', label: 'Sydney Time (GMT+10:00 / GMT+11:00)' },
+]
+
 function BookingPage() {
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
+  const timezoneOptions = useMemo(() => {
+    if (BOOKING_TIMEZONE_OPTIONS.some((option) => option.value === timezone)) return BOOKING_TIMEZONE_OPTIONS
+    return [{ value: timezone, label: `Detected timezone (${timezone})` }, ...BOOKING_TIMEZONE_OPTIONS]
+  }, [timezone])
   const [days, setDays] = useState<AvailabilityDay[]>([])
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
@@ -613,7 +633,13 @@ function BookingPage() {
       <div className="card stack-md">
         <label>
           Timezone
-          <input value={timezone} onChange={(e) => setTimezone(e.target.value)} />
+          <select value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+            {timezoneOptions.map((zone) => (
+              <option key={zone.value} value={zone.value}>
+                {zone.label}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="calendar-controls">
           <button
