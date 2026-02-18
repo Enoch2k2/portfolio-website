@@ -14,9 +14,11 @@ module Integrations
       description_lines = []
       description_lines << "Zoom: #{zoom_join_url}" if zoom_join_url.present?
       description_lines << meeting.notes.to_s if meeting.notes.present?
+      topic = meeting.topic.presence || "Client Discovery Call"
+      event_title = "#{meeting.name} - #{topic}"
 
       body = {
-        summary: meeting.topic.presence || "Client Discovery Call",
+        summary: event_title,
         description: description_lines.join("\n\n"),
         attendees: [{ email: meeting.email }],
         start: { dateTime: meeting.start_at.iso8601 },
