@@ -46,10 +46,11 @@ module Booking
       utc_start = days.first.in_time_zone(@timezone).beginning_of_day.utc
       utc_end = days.last.in_time_zone(@timezone).end_of_day.utc
       busy_windows = google_busy_windows_for_range(time_min: utc_start, time_max: utc_end)
+      post_meeting_buffer = booking_post_meeting_buffer_hours.hours
       local_meetings = Meeting.where.not(status: "cancelled")
-                             .where("start_at < ? AND end_at > ?", utc_end, utc_start)
+                             .where("start_at < ? AND end_at > ?", utc_end, utc_start - post_meeting_buffer)
                              .pluck(:start_at, :end_at)
-                             .map { |start_at, end_at| { start_at: start_at.utc, end_at: end_at.utc } }
+                             .map { |start_at, end_at| { start_at: start_at.utc, end_at: end_at.utc + post_meeting_buffer } }
 
       slots = []
       days.each do |day|
@@ -117,9 +118,12 @@ module Booking
     end
 
     def overlaps_meeting?(start_at, end_at)
-      Meeting.where.not(status: "cancelled")
-             .where("start_at < ? AND end_at > ?", end_at, start_at)
-             .exists?
+      post_meeting_buffer = booking_post_meeting_buffer_hours.hours
+      meeting_windows = Meeting.where.not(status: "cancelled")
+                               .where("start_at < ? AND end_at > ?", end_at, start_at - post_meeting_buffer)
+                               .pluck(:start_at, :end_at)
+                               .map { |meeting_start, meeting_end| { start_at: meeting_start.utc, end_at: meeting_end.utc + post_meeting_buffer } }
+      overlaps_windows?(start_at, end_at, meeting_windows)
     end
 
     def outside_business_hours?(start_local, end_local)
@@ -155,6 +159,10 @@ module Booking
 
     def booking_min_notice_hours
       [ENV.fetch("BOOKING_MIN_NOTICE_HOURS", 24).to_i, 0].max
+    end
+
+    def booking_post_meeting_buffer_hours
+      [ENV.fetch("BOOKING_POST_MEETING_BUFFER_HOURS", 2).to_i, 0].max
     end
 
   end

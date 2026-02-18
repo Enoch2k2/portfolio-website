@@ -51,7 +51,50 @@ function responseFor(url: string, overrides: ResponseOverrides = {}): MockJson {
     return { hero_photo_url: null, resume_url: null }
   }
   if (url.includes('/api/v1/public/availability')) {
-    return { timezone: 'UTC', days: [], slots: [] }
+    return {
+      timezone: 'UTC',
+      days: [
+        {
+          date: '2026-02-20',
+          slots: [{ start_at: '2026-02-20T15:00:00Z', end_at: '2026-02-20T15:30:00Z' }],
+        },
+      ],
+      slots: [{ start_at: '2026-02-20T15:00:00Z', end_at: '2026-02-20T15:30:00Z' }],
+    }
+  }
+  if (url.endsWith('/api/v1/public/meetings')) {
+    return {
+      id: 42,
+      name: 'Test User',
+      email: 'test@example.com',
+      timezone: 'UTC',
+      start_at: '2026-02-20T15:00:00Z',
+      end_at: '2026-02-20T15:30:00Z',
+      status: 'tentative',
+      topic: 'Website Consultation',
+      notes: '',
+      zoom_join_url: null,
+      google_event_id: null,
+      created_at: '2026-02-18T10:00:00Z',
+      updated_at: '2026-02-18T10:00:00Z',
+    }
+  }
+  if (url.includes('/api/v1/public/meetings/')) {
+    return {
+      id: 42,
+      name: 'Test User',
+      email: 'test@example.com',
+      timezone: 'UTC',
+      start_at: '2026-02-20T15:00:00Z',
+      end_at: '2026-02-20T15:30:00Z',
+      status: 'scheduled',
+      topic: 'Website Consultation',
+      notes: '',
+      zoom_join_url: 'https://zoom.us/j/42',
+      google_event_id: 'google-42',
+      created_at: '2026-02-18T10:00:00Z',
+      updated_at: '2026-02-18T10:00:00Z',
+    }
   }
 
   return {}
@@ -136,5 +179,93 @@ describe('App', () => {
     expect(await screen.findByRole('link', { name: 'Open Resume PDF' })).toBeInTheDocument()
     expect(await screen.findByText(/Senior Developer/i)).toBeInTheDocument()
     expect(screen.getByText(/Built scalable products\./i)).toBeInTheDocument()
+  })
+
+  it('submits booking then shows meeting provisioning success details', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        const method = init?.method ?? 'GET'
+
+        if (url.includes('/api/v1/public/meetings/42') && method === 'GET') {
+          const payload = {
+            id: 42,
+            name: 'Test User',
+            email: 'test@example.com',
+            timezone: 'UTC',
+            start_at: '2026-02-20T15:00:00Z',
+            end_at: '2026-02-20T15:30:00Z',
+            status: 'scheduled',
+            topic: 'Website Consultation',
+            notes: '',
+            zoom_join_url: 'https://zoom.us/j/42',
+            google_event_id: 'google-42',
+            created_at: '2026-02-18T10:00:00Z',
+            updated_at: '2026-02-18T10:00:00Z',
+          }
+          return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        }
+
+        return new Response(JSON.stringify(responseFor(url)), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
+    )
+
+    window.history.replaceState({}, '', '/book')
+    render(<App />)
+
+    const slotLabel = new Date('2026-02-20T15:00:00Z').toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+    fireEvent.click(await screen.findByRole('button', { name: slotLabel }))
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test User' } })
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'test@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Request Meeting' }))
+
+    expect(await screen.findByText('Creating your meeting')).toBeInTheDocument()
+    expect(await screen.findByText('Your meeting has been created.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'https://zoom.us/j/42' })).toBeInTheDocument()
+  })
+
+  it('routes to oops page when meeting provisioning reports failed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/api/v1/public/meetings/42')) {
+          return new Response(
+            JSON.stringify({
+              id: 42,
+              name: 'Test User',
+              email: 'test@example.com',
+              timezone: 'UTC',
+              start_at: '2026-02-20T15:00:00Z',
+              end_at: '2026-02-20T15:30:00Z',
+              status: 'failed',
+              topic: 'Website Consultation',
+              notes: 'Provisioning error',
+              zoom_join_url: null,
+              google_event_id: null,
+              created_at: '2026-02-18T10:00:00Z',
+              updated_at: '2026-02-18T10:00:00Z',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          )
+        }
+
+        return new Response(JSON.stringify(responseFor(url)), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }),
+    )
+
+    window.history.replaceState({}, '', '/book/status/42')
+    render(<App />)
+
+    expect(await screen.findByText(/Oops, we hit an unexpected error/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Try again' })).toBeInTheDocument()
   })
 })

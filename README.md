@@ -94,6 +94,9 @@ Environment variables in `.env`:
 - `BOOKING_MIN_NOTICE_HOURS` (default `24`)
   - Minimum advance notice required to book a slot.
   - Example: `24` means users can only pick slots at least 24 hours from "now".
+- `BOOKING_POST_MEETING_BUFFER_HOURS` (default `2`)
+  - Cooldown after each booked meeting before the next meeting can start.
+  - Example: if a meeting ends at `10:30`, the next available start is `12:30`.
 
 Timezone behavior:
 
@@ -110,6 +113,8 @@ Practical examples:
 - Shift booking window to 10am-6pm:
   - `BOOKING_DAY_START_HOUR=10`
   - `BOOKING_DAY_END_HOUR=18`
+- Enforce 2-hour post-meeting note buffer:
+  - `BOOKING_POST_MEETING_BUFFER_HOURS=2`
 
 ## Operations playbook
 

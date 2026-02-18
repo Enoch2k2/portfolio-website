@@ -35,6 +35,22 @@ export type SiteContent = {
   resume_text?: string | null
 }
 
+export type Meeting = {
+  id: number
+  name: string
+  email: string
+  timezone: string
+  start_at: string
+  end_at: string
+  status: string
+  topic: string | null
+  notes: string | null
+  zoom_join_url: string | null
+  google_event_id: string | null
+  created_at: string
+  updated_at: string
+}
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000'
 
 type RequestOptions = RequestInit & {
@@ -83,10 +99,11 @@ export const publicApi = {
     topic: string
     notes: string
   }) =>
-    apiRequest('/api/v1/public/meetings', {
+    apiRequest<Meeting>('/api/v1/public/meetings', {
       method: 'POST',
       body: JSON.stringify({ meeting: payload }),
     }),
+  getMeetingStatus: (id: number) => apiRequest<Meeting>(`/api/v1/public/meetings/${id}`),
   createContact: (payload: { name: string; email: string; company: string; message: string }) =>
     apiRequest('/api/v1/public/contacts', {
       method: 'POST',

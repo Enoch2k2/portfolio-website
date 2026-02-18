@@ -13,7 +13,7 @@ Rails.application.routes.draw do
         resources :profile_sections, only: :index
         resources :blog_posts, only: %i[index show], param: :slug
         resources :availability, only: :index
-        resources :meetings, only: :create
+        resources :meetings, only: %i[create show]
         resources :contacts, only: :create
       end
 

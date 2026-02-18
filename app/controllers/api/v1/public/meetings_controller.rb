@@ -30,6 +30,16 @@ module Api
           end
         end
 
+        def show
+          meeting = Meeting.find_by(id: params[:id])
+          if meeting.blank?
+            render json: { error: "Meeting not found." }, status: :not_found
+            return
+          end
+
+          render json: serialize(meeting), status: :ok
+        end
+
         private
 
         def meeting_params

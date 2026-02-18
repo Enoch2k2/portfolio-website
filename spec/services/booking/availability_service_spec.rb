@@ -67,5 +67,28 @@ module Booking
         expect(starts).to all(be >= Time.utc(2026, 2, 20, 8, 0, 0))
       end
     end
+
+    it 'blocks new bookings for two hours after an existing meeting' do
+      travel_to Time.utc(2026, 2, 17, 8, 0, 0) do
+        Meeting.create!(
+          name: "Existing Client",
+          email: "client@example.com",
+          timezone: "UTC",
+          start_at: Time.utc(2026, 2, 18, 10, 0, 0),
+          end_at: Time.utc(2026, 2, 18, 10, 30, 0),
+          topic: "Consultation",
+          notes: "Follow-up",
+          status: "scheduled",
+          idempotency_key: SecureRandom.uuid
+        )
+
+        service = service_with_busy_windows([])
+        blocked = service.slot_available?(Time.utc(2026, 2, 18, 12, 0, 0), Time.utc(2026, 2, 18, 12, 30, 0))
+        allowed_after_buffer = service.slot_available?(Time.utc(2026, 2, 18, 12, 30, 0), Time.utc(2026, 2, 18, 13, 0, 0))
+
+        expect(blocked).to be(false)
+        expect(allowed_after_buffer).to be(true)
+      end
+    end
   end
 end

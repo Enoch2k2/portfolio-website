@@ -851,6 +851,35 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.meeting-progress-card,
+.meeting-success-card,
+.oops-card {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.meeting-progress-card {
+  text-align: center;
+}
+
+.meeting-detail-grid {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.meeting-detail-grid p {
+  margin: 0;
+}
+
+.oops-flow {
+  min-height: 52vh;
+  align-content: center;
+}
+
 .markdown :is(h1, h2, h3, h4) {
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;

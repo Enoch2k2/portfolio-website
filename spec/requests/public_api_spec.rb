@@ -24,28 +24,52 @@ RSpec.describe 'Public API' do
   end
 
   it 'creates a meeting request and enqueues provisioning' do
-    start_time = Time.current.utc.change(hour: 10, min: 0, sec: 0) + 1.day
-    start_time += 1.day until (1..5).include?(start_time.wday)
-    end_time = start_time + 30.minutes
+    travel_to Time.utc(2026, 2, 18, 8, 0, 0) do
+      start_time = Time.utc(2026, 2, 19, 10, 0, 0)
+      end_time = start_time + 30.minutes
 
-    expect do
-      post '/api/v1/public/meetings',
-           params: {
-             meeting: {
-               name: 'Test User',
-               email: 'test@example.com',
-               timezone: 'UTC',
-               start_at: start_time.iso8601,
-               end_at: end_time.iso8601,
-               topic: 'Discovery',
-               notes: 'Interested in collaboration'
+      expect do
+        post '/api/v1/public/meetings',
+             params: {
+               meeting: {
+                 name: 'Test User',
+                 email: 'test@example.com',
+                 timezone: 'UTC',
+                 start_at: start_time.iso8601,
+                 end_at: end_time.iso8601,
+                 topic: 'Discovery',
+                 notes: 'Interested in collaboration'
+               }
              }
-           }
-    end.to have_enqueued_job(ProvisionMeetingJob).exactly(:once)
+      end.to have_enqueued_job(ProvisionMeetingJob).exactly(:once)
 
-    expect(response).to have_http_status(:accepted)
+      expect(response).to have_http_status(:accepted)
+      payload = JSON.parse(response.body)
+      expect(payload['status']).to eq('tentative')
+    end
+  end
+
+  it 'returns meeting status by id for public polling' do
+    meeting = Meeting.create!(
+      name: 'Polling User',
+      email: 'polling@example.com',
+      timezone: 'UTC',
+      start_at: Time.utc(2026, 2, 25, 14, 0, 0),
+      end_at: Time.utc(2026, 2, 25, 14, 30, 0),
+      topic: 'Website Consultation',
+      notes: 'Initial note',
+      status: 'scheduled',
+      zoom_join_url: 'https://zoom.us/j/123',
+      idempotency_key: SecureRandom.uuid
+    )
+
+    get "/api/v1/public/meetings/#{meeting.id}"
+
+    expect(response).to have_http_status(:ok)
     payload = JSON.parse(response.body)
-    expect(payload['status']).to eq('tentative')
+    expect(payload['id']).to eq(meeting.id)
+    expect(payload['status']).to eq('scheduled')
+    expect(payload['zoom_join_url']).to eq('https://zoom.us/j/123')
   end
 
   it 'returns availability grouped by day' do

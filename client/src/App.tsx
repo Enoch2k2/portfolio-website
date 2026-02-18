@@ -3,7 +3,7 @@ import type { DragEvent, FormEvent } from 'react'
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { MarkdownContent } from './components/MarkdownContent'
 import { adminApi, publicApi } from './lib/api'
-import type { AvailabilityDay, BlogPost, SiteContent } from './lib/api'
+import type { AvailabilityDay, BlogPost, Meeting, SiteContent } from './lib/api'
 
 const ADMIN_PATH = import.meta.env.VITE_ADMIN_PATH ?? '/workspace-ops'
 const GOOGLE_CALLBACK_PATH = import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_PATH ?? '/oauth/google/callback'
@@ -83,6 +83,8 @@ function AnimatedRoutes() {
         <Route path="/blog" element={<BlogListPage />} />
         <Route path="/blog/:slug" element={<BlogDetailPage />} />
         <Route path="/book" element={<BookingPage />} />
+        <Route path="/book/status/:id" element={<MeetingProvisioningPage />} />
+        <Route path="/oops" element={<OopsPage />} />
         <Route path={GOOGLE_CALLBACK_PATH} element={<GoogleOauthCallbackPage />} />
         <Route path={ZOOM_CALLBACK_PATH} element={<ZoomOauthCallbackPage />} />
         <Route path={ADMIN_PATH} element={<AdminPage />} />
@@ -222,8 +224,8 @@ function PortfolioPage() {
 }
 
 function ResumePage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [sections, setSections] = useState<Array<{ id: number; title: string; markdown_body: string }>>([])
   const [siteContent, setSiteContent] = useState<SiteContent>({ hero_photo_url: null, resume_url: null })
 
@@ -233,7 +235,8 @@ function ResumePage() {
         if (sectionsResult.status === 'fulfilled') {
           setSections(sectionsResult.value)
         } else {
-          setError(sectionsResult.reason instanceof Error ? sectionsResult.reason.message : 'Failed to load resume content.')
+          navigate('/oops?from=resume', { replace: true })
+          return
         }
 
         if (siteContentResult.status === 'fulfilled') {
@@ -243,10 +246,9 @@ function ResumePage() {
         }
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [navigate])
 
   if (loading) return <p>Loading resume content...</p>
-  if (error) return <p className="error">{error}</p>
 
   return (
     <section className="stack-lg">
@@ -284,8 +286,8 @@ function ResumePage() {
 }
 
 function BlogListPage() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [posts, setPosts] = useState<BlogPost[]>([])
   useRevealOnScroll('.blog-flow .reveal-on-scroll', posts.length)
 
@@ -293,15 +295,14 @@ function BlogListPage() {
     publicApi
       .getBlogPosts()
       .then((data) => setPosts(data))
-      .catch((e: Error) => setError(e.message))
+      .catch(() => navigate('/oops?from=blog-list', { replace: true }))
       .finally(() => setLoading(false))
-  }, [])
+  }, [navigate])
 
   return (
     <section className="stack-lg blog-flow">
       <h1>Blog</h1>
       {loading && <p>Loading posts...</p>}
-      {error && <p className="error">{error}</p>}
       {!loading && posts.length === 0 && <p>No published posts yet.</p>}
       <div className="blog-list-grid">
         {posts.map((post) => {
@@ -343,8 +344,8 @@ function BlogListPage() {
 
 function BlogDetailPage() {
   const { slug = '' } = useParams()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [post, setPost] = useState<BlogPost | null>(null)
   const [previousPost, setPreviousPost] = useState<BlogPost | null>(null)
   const [nextPost, setNextPost] = useState<BlogPost | null>(null)
@@ -354,9 +355,9 @@ function BlogDetailPage() {
     publicApi
       .getBlogPost(slug)
       .then((data) => setPost(data))
-      .catch((e: Error) => setError(e.message))
+      .catch(() => navigate('/oops?from=blog-detail', { replace: true }))
       .finally(() => setLoading(false))
-  }, [slug])
+  }, [navigate, slug])
 
   useEffect(() => {
     if (!slug) return
@@ -375,7 +376,6 @@ function BlogDetailPage() {
   }, [slug])
 
   if (loading) return <p>Loading post...</p>
-  if (error) return <p className="error">{error}</p>
   if (!post) return <p>Post not found.</p>
 
   const publishedLabel = post.published_at
@@ -559,7 +559,143 @@ const BOOKING_TIMEZONE_OPTIONS = [
   { value: 'Australia/Sydney', label: 'Sydney Time (GMT+10:00 / GMT+11:00)' },
 ]
 
+function OopsPage() {
+  const [searchParams] = useSearchParams()
+  const from = searchParams.get('from') ?? 'this page'
+  const retry = searchParams.get('retry')
+  const message = searchParams.get('message')
+
+  return (
+    <section className="stack-lg oops-flow">
+      <article className="card stack-md oops-card">
+        <p className="eyebrow">Something went wrong</p>
+        <h1>Oops, we hit an unexpected error.</h1>
+        <p>We couldn't complete the request for {from}. Please try again.</p>
+        {message && <p className="status">Details: {message}</p>}
+        <div className="button-row">
+          {retry ? (
+            <Link className="btn btn-primary" to={retry}>
+              Try again
+            </Link>
+          ) : (
+            <Link className="btn btn-primary" to="/">
+              Back to Home
+            </Link>
+          )}
+          <Link className="btn btn-ghost" to="/">
+            Return Home
+          </Link>
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function MeetingProvisioningPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [meeting, setMeeting] = useState<Meeting | null>(null)
+  const [pollMessage, setPollMessage] = useState('Creating your meeting and provisioning Zoom details...')
+
+  useEffect(() => {
+    const meetingId = Number(id)
+    if (!Number.isFinite(meetingId) || meetingId <= 0) {
+      navigate('/oops?from=booking-status&retry=/book', { replace: true })
+      return
+    }
+
+    let active = true
+    let attempts = 0
+    const maxAttempts = 30
+
+    const poll = async () => {
+      attempts += 1
+      try {
+        const payload = await publicApi.getMeetingStatus(meetingId)
+        if (!active) return
+        setMeeting(payload)
+
+        if (payload.status === 'scheduled') return
+        if (payload.status === 'failed') {
+          navigate('/oops?from=meeting-provisioning&retry=/book', { replace: true })
+          return
+        }
+        if (attempts >= maxAttempts) {
+          navigate('/oops?from=meeting-provisioning-timeout&retry=/book', { replace: true })
+          return
+        }
+
+        setPollMessage(`Finalizing your meeting... (attempt ${attempts}/${maxAttempts})`)
+        window.setTimeout(poll, 2000)
+      } catch {
+        if (!active) return
+        navigate('/oops?from=meeting-status-polling&retry=/book', { replace: true })
+      }
+    }
+
+    void poll()
+    return () => {
+      active = false
+    }
+  }, [id, navigate])
+
+  if (!meeting || meeting.status !== 'scheduled') {
+    return (
+      <section className="stack-lg">
+        <article className="card stack-md meeting-progress-card">
+          <h1>Creating your meeting</h1>
+          <p>{pollMessage}</p>
+          <p className="status">Please keep this page open. This usually finishes within a few moments.</p>
+        </article>
+      </section>
+    )
+  }
+
+  const startLocal = new Date(meeting.start_at).toLocaleString([], { dateStyle: 'full', timeStyle: 'short' })
+  const endLocal = new Date(meeting.end_at).toLocaleString([], { timeStyle: 'short' })
+
+  return (
+    <section className="stack-lg">
+      <article className="card stack-md meeting-success-card">
+        <p className="eyebrow">Meeting confirmed</p>
+        <h1>Your meeting has been created.</h1>
+        <p>You're all set. A confirmation email is on the way with these details.</p>
+        <div className="meeting-detail-grid">
+          <p>
+            <strong>Topic:</strong> {meeting.topic || 'Website Consultation'}
+          </p>
+          <p>
+            <strong>Date & time:</strong> {startLocal} - {endLocal}
+          </p>
+          <p>
+            <strong>Timezone:</strong> {meeting.timezone}
+          </p>
+          <p>
+            <strong>Zoom link:</strong>{' '}
+            {meeting.zoom_join_url ? (
+              <a href={meeting.zoom_join_url} target="_blank" rel="noreferrer" className="text-link">
+                {meeting.zoom_join_url}
+              </a>
+            ) : (
+              'Zoom link is still being finalized. Check your email confirmation shortly.'
+            )}
+          </p>
+        </div>
+        <div className="button-row">
+          <Link className="btn btn-ghost" to="/">
+            Back to Home
+          </Link>
+          <Link className="btn btn-ghost" to="/book">
+            Book Another Meeting
+          </Link>
+        </div>
+      </article>
+    </section>
+  )
+}
+
 function BookingPage() {
+  const navigate = useNavigate()
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
   const timezoneOptions = useMemo(() => {
     if (BOOKING_TIMEZONE_OPTIONS.some((option) => option.value === timezone)) return BOOKING_TIMEZONE_OPTIONS
@@ -574,6 +710,7 @@ function BookingPage() {
   const [status, setStatus] = useState('')
   const [form, setForm] = useState({ name: '', email: '', topic: 'Website Consultation', notes: '' })
   const [selectedSlot, setSelectedSlot] = useState<{ start_at: string; end_at: string } | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     publicApi
@@ -608,20 +745,29 @@ function BookingPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
     if (!selectedSlot) {
       setStatus('Please choose an available slot.')
       return
     }
+    setIsSubmitting(true)
     try {
-      await publicApi.createMeeting({
+      const created = await publicApi.createMeeting({
         ...form,
         timezone,
         start_at: selectedSlot.start_at,
         end_at: selectedSlot.end_at,
       })
-      setStatus('Meeting request submitted. You will receive confirmation once provisioned.')
+      navigate(`/book/status/${created.id}`, { replace: true })
     } catch (error) {
-      setStatus((error as Error).message)
+      const message = (error as Error).message
+      if (message.includes('Requested slot is no longer available')) {
+        setStatus(message)
+      } else {
+        navigate(`/oops?from=booking-submit&retry=/book&message=${encodeURIComponent(message)}`, { replace: true })
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -726,8 +872,8 @@ function BookingPage() {
           Notes
           <textarea value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
         </label>
-        <button type="submit" className="btn btn-primary">
-          Request Meeting
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Request Meeting'}
         </button>
       </form>
       {status && <p className="status">{status}</p>}
