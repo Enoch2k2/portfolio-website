@@ -66,4 +66,19 @@ RSpec.describe 'Public API' do
     expect(payload).to have_key('hero_photo_url')
     expect(payload).to have_key('resume_url')
   end
+
+  it 'returns resume_url when a resume has been uploaded' do
+    setting = SiteSetting.resume_document
+    setting.image.attach(
+      io: File.open(Rails.root.join('spec/fixtures/files/sample_resume.pdf')),
+      filename: 'sample_resume.pdf',
+      content_type: 'application/pdf'
+    )
+
+    get '/api/v1/public/site_content'
+
+    expect(response).to have_http_status(:ok)
+    payload = JSON.parse(response.body)
+    expect(payload['resume_url']).to be_present
+  end
 end

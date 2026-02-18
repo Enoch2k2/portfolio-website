@@ -50,8 +50,52 @@ RSpec.describe 'Admin API' do
   it 'requires a file for resume upload' do
     post '/api/v1/admin/site_content/resume', headers: auth_headers
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     payload = JSON.parse(response.body)
     expect(payload['error']).to eq('file is required')
+  end
+
+  it 'uploads a pdf resume and exposes resume_url' do
+    file = Rack::Test::UploadedFile.new(
+      Rails.root.join('spec/fixtures/files/sample_resume.pdf'),
+      'application/pdf'
+    )
+
+    post '/api/v1/admin/site_content/resume',
+         params: { file: file },
+         headers: auth_headers
+
+    expect(response).to have_http_status(:ok)
+    payload = JSON.parse(response.body)
+    expect(payload['resume_url']).to be_present
+  end
+
+  it 'rejects non-pdf resume upload' do
+    file = Rack::Test::UploadedFile.new(
+      Rails.root.join('spec/fixtures/files/sample_resume.txt'),
+      'text/plain'
+    )
+
+    post '/api/v1/admin/site_content/resume',
+         params: { file: file },
+         headers: auth_headers
+
+    expect(response).to have_http_status(:unprocessable_content)
+    payload = JSON.parse(response.body)
+    expect(payload['error']).to eq('resume must be a PDF file')
+  end
+
+  it 'removes uploaded resume document' do
+    setting = SiteSetting.resume_document
+    setting.image.attach(
+      io: File.open(Rails.root.join('spec/fixtures/files/sample_resume.pdf')),
+      filename: 'sample_resume.pdf',
+      content_type: 'application/pdf'
+    )
+
+    delete '/api/v1/admin/site_content/resume', headers: auth_headers
+
+    expect(response).to have_http_status(:no_content)
+    expect(setting.reload.image).not_to be_attached
   end
 end
