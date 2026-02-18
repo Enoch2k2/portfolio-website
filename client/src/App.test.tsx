@@ -122,14 +122,17 @@ describe('App', () => {
 
   it('renders inline resume viewer on resume route when resume url exists', async () => {
     installFetchMock({
-      publicSiteContent: { hero_photo_url: null, resume_url: 'https://example.com/resume.pdf' },
+      publicSiteContent: {
+        hero_photo_url: null,
+        resume_url: 'https://example.com/resume.pdf',
+        resume_text: 'Senior Developer\n\nBuilt scalable products.',
+      },
     })
     window.history.replaceState({}, '', '/resume')
     render(<App />)
 
     expect(await screen.findByRole('link', { name: 'Open Resume PDF' })).toBeInTheDocument()
-    await waitFor(() => {
-      expect(document.querySelector('.resume-viewer')).toBeInTheDocument()
-    })
+    expect(await screen.findByText(/Senior Developer/i)).toBeInTheDocument()
+    expect(screen.getByText(/Built scalable products\./i)).toBeInTheDocument()
   })
 })

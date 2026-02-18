@@ -228,12 +228,20 @@ function ResumePage() {
   const [siteContent, setSiteContent] = useState<SiteContent>({ hero_photo_url: null, resume_url: null })
 
   useEffect(() => {
-    Promise.all([publicApi.getProfileSections(), publicApi.getSiteContent()])
-      .then(([sectionData, contentData]) => {
-        setSections(sectionData)
-        setSiteContent(contentData)
+    Promise.allSettled([publicApi.getProfileSections(), publicApi.getSiteContent()])
+      .then(([sectionsResult, siteContentResult]) => {
+        if (sectionsResult.status === 'fulfilled') {
+          setSections(sectionsResult.value)
+        } else {
+          setError(sectionsResult.reason instanceof Error ? sectionsResult.reason.message : 'Failed to load resume content.')
+        }
+
+        if (siteContentResult.status === 'fulfilled') {
+          setSiteContent(siteContentResult.value)
+        } else {
+          setSiteContent({ hero_photo_url: null, resume_url: null })
+        }
       })
-      .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
@@ -243,22 +251,22 @@ function ResumePage() {
   return (
     <section className="stack-lg">
       <h1>Resume</h1>
-      {siteContent.resume_url && (
+      {(siteContent.resume_text || siteContent.resume_url) && (
         <article className="card resume-viewer-card stack-sm">
-          <div className="button-row">
-            <a href={siteContent.resume_url} className="btn btn-ghost" target="_blank" rel="noreferrer">
-              Open Resume PDF
-            </a>
-          </div>
-          <object data={siteContent.resume_url} type="application/pdf" className="resume-viewer">
-            <p>
-              This browser cannot preview PDFs.{' '}
-              <a href={siteContent.resume_url} className="text-link" target="_blank" rel="noreferrer">
-                Open the resume
+          {siteContent.resume_text ? (
+            <div className="resume-text-content">
+              <MarkdownContent source={siteContent.resume_text} />
+            </div>
+          ) : (
+            <p className="status">Resume text could not be extracted automatically. Use the PDF link below.</p>
+          )}
+          {siteContent.resume_url && (
+            <div className="button-row">
+              <a href={siteContent.resume_url} className="btn btn-ghost" target="_blank" rel="noreferrer">
+                Open Resume PDF
               </a>
-              .
-            </p>
-          </object>
+            </div>
+          )}
         </article>
       )}
       {sections.length === 0 ? (

@@ -246,12 +246,18 @@ p {
   overflow: hidden;
 }
 
-.resume-viewer {
-  width: 100%;
-  min-height: 680px;
+.resume-text-content {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.resume-text-content p {
+  white-space: pre-wrap;
+  line-height: 1.72;
 }
 
 .admin-shell {
@@ -909,8 +915,8 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .resume-viewer {
-    min-height: 540px;
+  .resume-text-content {
+    padding: 14px;
   }
 }
 

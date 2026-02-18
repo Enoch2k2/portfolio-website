@@ -32,6 +32,7 @@ export type AvailabilityDay = {
 export type SiteContent = {
   hero_photo_url: string | null
   resume_url: string | null
+  resume_text?: string | null
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000'

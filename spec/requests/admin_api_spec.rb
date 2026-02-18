@@ -45,6 +45,7 @@ RSpec.describe 'Admin API' do
     payload = JSON.parse(response.body)
     expect(payload).to have_key('hero_photo_url')
     expect(payload).to have_key('resume_url')
+    expect(payload).to have_key('resume_text')
   end
 
   it 'requires a file for resume upload' do
@@ -56,6 +57,8 @@ RSpec.describe 'Admin API' do
   end
 
   it 'uploads a pdf resume and exposes resume_url' do
+    allow(Pdf::ResumeTextExtractor).to receive(:new).and_return(double(call: 'Parsed resume text'))
+
     file = Rack::Test::UploadedFile.new(
       Rails.root.join('spec/fixtures/files/sample_resume.pdf'),
       'application/pdf'
@@ -68,6 +71,7 @@ RSpec.describe 'Admin API' do
     expect(response).to have_http_status(:ok)
     payload = JSON.parse(response.body)
     expect(payload['resume_url']).to be_present
+    expect(payload['resume_text']).to include('Parsed resume text')
   end
 
   it 'rejects non-pdf resume upload' do

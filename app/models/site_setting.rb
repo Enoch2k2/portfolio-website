@@ -13,4 +13,8 @@ class SiteSetting < ApplicationRecord
   def self.resume_document
     find_or_create_by!(key: RESUME_KEY)
   end
+
+  def resume_text
+    value.to_s.presence
+  end
 end
