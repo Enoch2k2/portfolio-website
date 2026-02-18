@@ -303,6 +303,39 @@ p {
   color: #1e3a8a;
 }
 
+.admin-subnav {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 4px;
+  display: grid;
+  gap: 6px;
+}
+
+.admin-subtab-btn {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: var(--text-secondary);
+  text-align: left;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.admin-subtab-btn:hover {
+  border-color: #cddbf0;
+  color: var(--text-primary);
+}
+
+.admin-subtab-btn-active {
+  border-color: rgba(29, 78, 216, 0.35);
+  background: rgba(29, 78, 216, 0.08);
+  color: #1e3a8a;
+}
+
 .admin-panel {
   min-width: 0;
 }
@@ -459,6 +492,52 @@ textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.blog-editor-helper {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor-toolbar .btn {
+  padding: 8px 12px;
+}
+
+.editor-image-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.editor-image-row .btn {
+  white-space: nowrap;
+}
+
+.blog-preview-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.blog-preview-card > :first-child {
+  margin-top: 0;
+}
+
+.blog-preview-card > :last-child {
+  margin-bottom: 0;
+}
+
 .slot-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
@@ -567,6 +646,26 @@ textarea {
 .list-button:hover {
   border-color: #b8c6db;
   box-shadow: var(--shadow-sm);
+}
+
+.admin-blog-list-button {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+
+.admin-blog-list-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.admin-blog-list-meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-muted);
 }
 
 .text-link {
@@ -892,6 +991,13 @@ textarea {
     border-bottom-color: rgba(29, 78, 216, 0.65);
   }
 
+  .admin-subnav {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: none;
+    padding-top: 0;
+  }
+
   .bento-card,
   .bento-card-wide {
     grid-column: span 12;
@@ -903,6 +1009,10 @@ textarea {
 
   .blog-detail-flow {
     max-width: 100%;
+  }
+
+  .editor-image-row {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -933,6 +1043,10 @@ textarea {
   .admin-tab-btn-active {
     border-bottom-color: transparent;
     border-left-color: rgba(29, 78, 216, 0.65);
+  }
+
+  .admin-subnav {
+    grid-template-columns: 1fr;
   }
 
   .resume-text-content {

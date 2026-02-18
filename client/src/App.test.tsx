@@ -113,7 +113,9 @@ describe('App', () => {
     expect(await screen.findByText('Calendar Availability')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Blog' }))
-    expect(await screen.findByRole('button', { name: 'New Post' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Create New Blog' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'View Blogs' }))
+    expect(await screen.findByRole('button', { name: /Admin Post/i })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Profile' }))
     expect(await screen.findByText('Resume (PDF)')).toBeInTheDocument()

@@ -710,11 +710,32 @@ function BookingPage() {
 }
 
 function AdminPage() {
+  const toSlug = (value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/['’"]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+  const buildEmptyPost = (): BlogPost => ({
+    id: 0,
+    title: 'New Post',
+    slug: 'new-post',
+    summary: '',
+    markdown_body: '# New Post',
+    status: 'draft',
+    published_at: null,
+    scheduled_for: null,
+    tag_names: [],
+  })
+
   const [token, setToken] = useState<string>(() => localStorage.getItem('adminToken') ?? '')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [posts, setPosts] = useState<BlogPost[]>([])
   const [selected, setSelected] = useState<BlogPost | null>(null)
+  const [createDraft, setCreateDraft] = useState<BlogPost>(() => buildEmptyPost())
   const [status, setStatus] = useState('')
   const [integrations, setIntegrations] = useState<
     Array<{ provider: string; active: boolean; external_account_id: string | null; expires_at: string | null; expired: boolean }>
@@ -723,8 +744,11 @@ function AdminPage() {
   const [heroPhotoFile, setHeroPhotoFile] = useState<File | null>(null)
   const [resumeUrl, setResumeUrl] = useState<string | null>(null)
   const [resumeFile, setResumeFile] = useState<File | null>(null)
+  const [imageUrlInput, setImageUrlInput] = useState('')
+  const [imageAltInput, setImageAltInput] = useState('')
   const [resumeDropActive, setResumeDropActive] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'integrations' | 'blog'>('profile')
+  const [blogMode, setBlogMode] = useState<'create' | 'view'>('create')
   const navigate = useNavigate()
 
   const load = async (currentToken: string) => {
@@ -734,7 +758,10 @@ function AdminPage() {
     ])
     const siteContent = await adminApi.getSiteContent(currentToken)
     setPosts(postData)
-    setSelected(postData[0] ?? null)
+    setSelected((current) => {
+      if (!current?.id) return null
+      return postData.find((post) => post.id === current.id) ?? null
+    })
     setHeroPhotoUrl(siteContent.hero_photo_url)
     setResumeUrl(siteContent.resume_url)
     setIntegrations(integrationPayload.integrations)
@@ -759,14 +786,14 @@ function AdminPage() {
     }
   }
 
-  const save = async () => {
+  const saveExistingPost = async () => {
     if (!token || !selected) return
     try {
       const payload = {
         ...selected,
         tag_names: selected.tag_names ?? [],
       }
-      const saved = await adminApi.savePost(token, payload)
+      await adminApi.savePost(token, payload)
       setStatus('Post saved.')
       await load(token)
       setSelected(saved)
@@ -775,18 +802,22 @@ function AdminPage() {
     }
   }
 
-  const createPost = () => {
-    setSelected({
-      id: 0,
-      title: 'New Post',
-      slug: '',
-      summary: '',
-      markdown_body: '# New Post',
-      status: 'draft',
-      published_at: null,
-      scheduled_for: null,
-      tag_names: [],
-    })
+  const saveNewPost = async () => {
+    if (!token) return
+    try {
+      const payload = {
+        ...createDraft,
+        tag_names: createDraft.tag_names ?? [],
+      }
+      const saved = await adminApi.savePost(token, payload)
+      setStatus('Post created.')
+      setCreateDraft(buildEmptyPost())
+      await load(token)
+      setSelected(null)
+      setBlogMode('view')
+    } catch (error) {
+      setStatus((error as Error).message)
+    }
   }
 
   const remove = async () => {
@@ -798,6 +829,37 @@ function AdminPage() {
     } catch (error) {
       setStatus((error as Error).message)
     }
+  }
+
+  const activeBlogPost = blogMode === 'create' ? createDraft : selected
+
+  const setActiveBlogPost = (next: BlogPost) => {
+    if (blogMode === 'create') {
+      setCreateDraft(next)
+      return
+    }
+    setSelected(next)
+  }
+
+  const insertMarkdownSnippet = (snippet: string) => {
+    if (!activeBlogPost) return
+    const current = activeBlogPost.markdown_body ?? ''
+    const joiner = current.endsWith('\n') || current.length === 0 ? '' : '\n\n'
+    setActiveBlogPost({ ...activeBlogPost, markdown_body: `${current}${joiner}${snippet}` })
+  }
+
+  const insertImageMarkdown = () => {
+    const url = imageUrlInput.trim()
+    if (!url) {
+      setStatus('Add an image URL first.')
+      return
+    }
+
+    const alt = imageAltInput.trim() || 'Blog image'
+    insertMarkdownSnippet(`![${alt}](${url})`)
+    setImageUrlInput('')
+    setImageAltInput('')
+    setStatus('Image markdown inserted.')
   }
 
   const uploadHeroPhoto = async () => {
@@ -907,6 +969,124 @@ function AdminPage() {
     window.location.href = oauthUrl.toString()
   }
 
+  const adminBlogDateLabel = (post: BlogPost) => {
+    const sourceDate = post.published_at ?? post.scheduled_for ?? null
+    if (!sourceDate) return 'Updated: n/a'
+
+    return `Updated: ${new Date(sourceDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`
+  }
+
+  const renderBlogEditor = (options: {
+    post: BlogPost
+    onChange: (next: BlogPost) => void
+    onSave: () => void
+    saveLabel?: string
+    onCancel?: () => void
+    cancelLabel?: string
+  }) => {
+    const { post, onChange, onSave, saveLabel = 'Save', onCancel, cancelLabel = 'Cancel' } = options
+    return (
+      <article className="card stack-md">
+        <label>
+          Title
+          <input
+            value={post.title}
+            onChange={(e) =>
+              onChange({
+                ...post,
+                title: e.target.value,
+                slug: toSlug(e.target.value),
+              })
+            }
+          />
+        </label>
+        <label>
+          Slug
+          <input value={post.slug ?? ''} disabled readOnly />
+        </label>
+        <label>
+          Summary
+          <textarea value={post.summary ?? ''} onChange={(e) => onChange({ ...post, summary: e.target.value })} />
+        </label>
+        <label>
+          Status
+          <select value={post.status} onChange={(e) => onChange({ ...post, status: e.target.value })}>
+            <option value="draft">draft</option>
+            <option value="scheduled">scheduled</option>
+            <option value="published">published</option>
+            <option value="archived">archived</option>
+          </select>
+        </label>
+        <label>
+          Tags (comma separated)
+          <input
+            value={(post.tag_names ?? []).join(', ')}
+            onChange={(e) =>
+              onChange({
+                ...post,
+                tag_names: e.target.value
+                  .split(',')
+                  .map((item) => item.trim())
+                  .filter(Boolean),
+              })
+            }
+          />
+        </label>
+        <article className="blog-editor-helper">
+          <p className="status">Quick insert</p>
+          <div className="editor-toolbar">
+            <button type="button" className="btn btn-ghost" onClick={() => insertMarkdownSnippet('## Section Heading')}>
+              H2
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => insertMarkdownSnippet('### Subheading')}>
+              H3
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => insertMarkdownSnippet('- Bullet item')}>
+              Bullet List
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => insertMarkdownSnippet('[Link text](https://example.com)')}>
+              Link
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => insertMarkdownSnippet('```ts\n// code block\n```')}>
+              Code Block
+            </button>
+          </div>
+          <div className="editor-image-row">
+            <input placeholder="https://image-url..." value={imageUrlInput} onChange={(e) => setImageUrlInput(e.target.value)} />
+            <input placeholder="Alt text (optional)" value={imageAltInput} onChange={(e) => setImageAltInput(e.target.value)} />
+            <button type="button" className="btn btn-ghost" onClick={insertImageMarkdown}>
+              Insert Image
+            </button>
+          </div>
+          <p className="status">Images use Markdown syntax: ![alt](https://...)</p>
+        </article>
+        <label>
+          Markdown Content
+          <textarea className="markdown-editor" value={post.markdown_body ?? ''} onChange={(e) => onChange({ ...post, markdown_body: e.target.value })} />
+        </label>
+        <article className="blog-preview-card">
+          <p className="status">Live preview</p>
+          <MarkdownContent source={post.markdown_body ?? ''} />
+        </article>
+        <div className="button-row">
+          <button className="btn btn-primary" onClick={onSave}>
+            {saveLabel}
+          </button>
+          {onCancel && (
+            <button className="btn btn-ghost" onClick={onCancel}>
+              {cancelLabel}
+            </button>
+          )}
+          {!!post.id && (
+            <button className="btn btn-danger" onClick={remove}>
+              Delete
+            </button>
+          )}
+        </div>
+      </article>
+    )
+  }
+
   if (!token) {
     return (
       <section className="stack-md">
@@ -952,6 +1132,25 @@ function AdminPage() {
           >
             Blog
           </button>
+          {activeTab === 'blog' && (
+            <div className="admin-subnav">
+              <button
+                className={`admin-subtab-btn ${blogMode === 'create' ? 'admin-subtab-btn-active' : ''}`}
+                onClick={() => setBlogMode('create')}
+              >
+                Create New Blog
+              </button>
+              <button
+                className={`admin-subtab-btn ${blogMode === 'view' ? 'admin-subtab-btn-active' : ''}`}
+                onClick={() => {
+                  setSelected(null)
+                  setBlogMode('view')
+                }}
+              >
+                View Blogs
+              </button>
+            </div>
+          )}
         </aside>
 
         <div className="admin-panel stack-lg">
@@ -1054,83 +1253,47 @@ function AdminPage() {
           )}
 
           {activeTab === 'blog' && (
-            <div className="grid-2">
-              <aside className="card stack-sm">
-                <div className="button-row">
-                  <button className="btn btn-ghost" onClick={createPost}>
-                    New Post
-                  </button>
-                </div>
-                {posts.map((post) => (
-                  <button key={post.id} className="list-button" onClick={() => setSelected(post)}>
-                    {post.title} <small>{post.status}</small>
-                  </button>
-                ))}
-              </aside>
-              <article className="card stack-md">
-                {!selected ? (
-                  <p>Select a post.</p>
-                ) : (
-                  <>
-                    <label>
-                      Title
-                      <input value={selected.title} onChange={(e) => setSelected({ ...selected, title: e.target.value })} />
-                    </label>
-                    <label>
-                      Slug
-                      <input value={selected.slug ?? ''} onChange={(e) => setSelected({ ...selected, slug: e.target.value })} />
-                    </label>
-                    <label>
-                      Summary
-                      <textarea
-                        value={selected.summary ?? ''}
-                        onChange={(e) => setSelected({ ...selected, summary: e.target.value })}
-                      />
-                    </label>
-                    <label>
-                      Status
-                      <select value={selected.status} onChange={(e) => setSelected({ ...selected, status: e.target.value })}>
-                        <option value="draft">draft</option>
-                        <option value="scheduled">scheduled</option>
-                        <option value="published">published</option>
-                        <option value="archived">archived</option>
-                      </select>
-                    </label>
-                    <label>
-                      Tags (comma separated)
-                      <input
-                        value={(selected.tag_names ?? []).join(', ')}
-                        onChange={(e) =>
-                          setSelected({
-                            ...selected,
-                            tag_names: e.target.value
-                              .split(',')
-                              .map((item) => item.trim())
-                              .filter(Boolean),
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Markdown Content
-                      <textarea
-                        className="markdown-editor"
-                        value={selected.markdown_body ?? ''}
-                        onChange={(e) => setSelected({ ...selected, markdown_body: e.target.value })}
-                      />
-                    </label>
-                    <div className="button-row">
-                      <button className="btn btn-primary" onClick={save}>
-                        Save
-                      </button>
-                      <button className="btn btn-danger" onClick={remove} disabled={!selected.id}>
-                        Delete
-                      </button>
-                    </div>
-                  </>
-                )}
-              </article>
-            </div>
+            <>
+              {blogMode === 'create' &&
+                renderBlogEditor({
+                  post: createDraft,
+                  onChange: setCreateDraft,
+                  onSave: saveNewPost,
+                  saveLabel: 'Create Blog',
+                })}
+
+              {blogMode === 'view' && (
+                <>
+                  {!selected ? (
+                    <aside className="card stack-sm">
+                      <h2>All Blogs</h2>
+                      <p className="status">Select a post to edit. This view stays read-only until you choose one.</p>
+                      {posts.length === 0 ? (
+                        <p className="status">No blog posts yet. Use Create New Blog to publish your first post.</p>
+                      ) : (
+                        posts.map((post) => (
+                          <button key={post.id} className="list-button admin-blog-list-button" onClick={() => setSelected(post)}>
+                            <span className="admin-blog-list-title">{post.title}</span>
+                            <span className="admin-blog-list-meta">
+                              <small>{post.status}</small>
+                              <small>{adminBlogDateLabel(post)}</small>
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </aside>
+                  ) : (
+                    renderBlogEditor({
+                      post: selected,
+                      onChange: setSelected,
+                      onSave: saveExistingPost,
+                      saveLabel: 'Update Blog',
+                      onCancel: () => setSelected(null),
+                    })
+                  )}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
