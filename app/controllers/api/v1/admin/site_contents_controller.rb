@@ -1,0 +1,79 @@
+module Api
+  module V1
+    module Admin
+      class SiteContentsController < BaseController
+        include Rails.application.routes.url_helpers
+
+        def show
+          hero_setting = SiteSetting.hero_photo
+          resume_setting = SiteSetting.resume_document
+          render json: {
+            hero_photo_url: hero_photo_url(hero_setting),
+            resume_url: resume_url(resume_setting)
+          }
+        end
+
+        def hero_photo
+          setting = SiteSetting.hero_photo
+          file = params[:image]
+          if file.blank?
+            render json: { error: "image is required" }, status: :unprocessable_entity
+            return
+          end
+
+          setting.image.attach(file)
+          render json: { hero_photo_url: hero_photo_url(setting) }, status: :ok
+        end
+
+        def resume
+          setting = SiteSetting.resume_document
+          file = params[:file]
+          if file.blank?
+            render json: { error: "file is required" }, status: :unprocessable_entity
+            return
+          end
+
+          unless pdf_file?(file)
+            render json: { error: "resume must be a PDF file" }, status: :unprocessable_entity
+            return
+          end
+
+          setting.image.attach(file)
+          render json: { resume_url: resume_url(setting) }, status: :ok
+        end
+
+        def destroy_hero_photo
+          setting = SiteSetting.hero_photo
+          setting.image.purge if setting.image.attached?
+
+          head :no_content
+        end
+
+        def destroy_resume
+          setting = SiteSetting.resume_document
+          setting.image.purge if setting.image.attached?
+
+          head :no_content
+        end
+
+        private
+
+        def hero_photo_url(setting)
+          return nil unless setting.image.attached?
+
+          rails_blob_url(setting.image, host: request.base_url)
+        end
+
+        def resume_url(setting)
+          return nil unless setting.image.attached?
+
+          rails_blob_url(setting.image, host: request.base_url)
+        end
+
+        def pdf_file?(file)
+          file.content_type.in?(%w[application/pdf application/x-pdf]) || file.original_filename.to_s.downcase.end_with?(".pdf")
+        end
+      end
+    end
+  end
+end

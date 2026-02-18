@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! bundle exec foreman --version >/dev/null 2>&1; then
+  echo "Foreman is not available yet. Run: bundle install"
+  exit 1
+fi
+
+export PORT="${PORT:-3000}"
+export VITE_PORT="${VITE_PORT:-5173}"
+
+exec bundle exec foreman start -f Procfile.dev "$@"
