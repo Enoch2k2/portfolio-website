@@ -101,4 +101,5 @@ Existing deployment files:
 
 - Rails boot: `bin/rails runner "puts :ok"`
 - Frontend build: `npm --prefix client run build`
-- Test suite: `bin/rails test`
+- Rails tests (RSpec): `bundle exec rspec`
+- Frontend tests (RTL + Vitest): `npm --prefix client run test`

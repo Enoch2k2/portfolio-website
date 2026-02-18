@@ -50,4 +50,7 @@ group :development, :test do
 
   # Run multiple development processes from Procfile.dev
   gem "foreman", require: false
+
+  # RSpec testing framework for Rails
+  gem "rspec-rails"
 end
